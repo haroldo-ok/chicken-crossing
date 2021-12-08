@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "lib/SMSlib.h"
@@ -17,15 +16,12 @@
 #define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (3)
-#define PLAYER_SHOT_SPEED (6)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
 #define PLAYER_BOTTOM (146)
 
-#define GROUP_ENEMY_SUB (1)
-#define GROUP_ENEMY_SHOT (2)
-#define GROUP_FISH (3)
-#define GROUP_DIVER (4)
+#define GROUP_RED_CAR (1)
+#define GROUP_BIKE (2)
 
 #define SCORE_DIGITS (6)
 
@@ -42,7 +38,6 @@
 actor actors[MAX_ACTORS];
 
 actor *player = actors;
-actor *ply_shot = actors + 1;
 actor *first_spawner = actors + 2;
 
 int animation_delay;
@@ -75,7 +70,6 @@ struct level {
 	unsigned char fish_speed;
 	unsigned char diver_speed;
 	
-	unsigned int diver_chance;
 	int boost_chance;
 	char enemy_can_fire;
 	char show_diver_indicator;
@@ -89,47 +83,6 @@ void clear_actors() {
 	FOREACH_ACTOR(act) {
 		act->active = 0;
 	}
-}
-
-void fire_shot(actor *shot, actor *shooter, char speed) {	
-	static actor *_shot, *_shooter;
-
-	if (shot->active || level.starting) return;
-	
-	_shot = shot;
-	_shooter = shooter;
-	
-	init_actor(_shot, _shooter->x, _shooter->y, 1, 1, _shooter->base_tile + 36, 4);
-	
-	_shot->col_x = 0;
-	_shot->col_y = 8;
-	_shot->col_w = _shot->pixel_w;
-	_shot->col_h = 4;
-	
-	_shot->facing_left = _shooter->facing_left;
-	_shot->spd_x = _shooter->facing_left ? -speed : speed;
-	if (!_shooter->facing_left) {
-		_shot->x += _shooter->pixel_w - 8;
-	}
-}
-
-void fire_shot_left(actor *shot, actor *shooter, char speed) {	
-	static actor *_shot, *_shooter;
-
-	if (shot->active || level.starting) return;
-	
-	_shot = shot;
-	_shooter = shooter;
-	
-	init_actor(_shot, _shooter->x, _shooter->y, 1, 1, _shooter->base_tile + 36, 3);
-	
-	_shot->col_x = 0;
-	_shot->col_y = 8;
-	_shot->col_w = _shot->pixel_w;
-	_shot->col_h = 4;
-	
-	_shot->facing_left = 1;
-	_shot->spd_x = -speed;
 }
 
 void move_actors() {
@@ -183,12 +136,6 @@ void handle_player_input() {
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
-		// Shoot
-		fire_shot_left(ply_shot, player, PLAYER_SHOT_SPEED);
-		
-		// Player's shot has a slightly larger collision box
-		ply_shot->col_y = 7;
-		ply_shot->col_h = 6;
 	}
 }
 
@@ -217,7 +164,7 @@ void handle_spawners() {
 			if (rand() & 3 > 1) {
 				// Always spawn from the left
 				facing_left = 0;
-				thing_to_spawn = (rand() >> 4) % level.diver_chance ? ((rand() >> 4) & 1) : 2;
+				thing_to_spawn = (rand() >> 4) & 1;
 				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
 				switch (thing_to_spawn) {
@@ -225,7 +172,7 @@ void handle_spawners() {
 					// Spawn a red car
 					init_actor(act, 0, y, 3, 1, 66, 1);
 					act->spd_x = level.submarine_speed + boost;
-					act->group = GROUP_ENEMY_SUB;
+					act->group = GROUP_RED_CAR;
 					act->score = level.submarine_score;
 					break;
 					
@@ -234,26 +181,12 @@ void handle_spawners() {
 					init_actor(act, 0, y, 2, 1, 128, 1);
 					init_actor(act2, -64, y, 2, 1, 128, 1);
 					act->spd_x = level.fish_speed + boost;
-					act->group = GROUP_FISH;
+					act->group = GROUP_BIKE;
 					act->score = level.fish_score;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
 					act2->score = act->score;
-					break;
-					
-				case 2:
-					// Spawn a diver
-					init_actor(act, 0, y, 2, 1, 192, 4);
-					init_actor(act2, -24, y, 2, 1, 160, 2);
-					
-					act->spd_x = level.diver_speed + boost;
-					act->group = GROUP_DIVER;
-					act->score = level.diver_score;
-					
-					act2->active = level.show_diver_indicator;
-					act2->spd_x = act->spd_x;
-					act2->group = 0;
 					break;
 				}
 				
@@ -330,23 +263,6 @@ char is_touching(actor *act1, actor *act2) {
 // Made global for performance
 actor *collider;
 
-void check_collision_against_player_shot() {	
-	if (!collider->active || !collider->group) {
-		return;
-	}
-
-	if (ply_shot->active && is_touching(collider, ply_shot)) {
-		if (collider->group != GROUP_DIVER) {
-			collider->active = 0;
-			add_score(collider->score);
-		}
-		
-		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
-			ply_shot->active = 0;
-		}		
-	}
-}
-
 void check_collision_against_player() {	
 	if (!collider->active || !collider->group) {
 		return;
@@ -354,13 +270,7 @@ void check_collision_against_player() {
 
 	if (player->active && is_touching(collider, player)) {
 		collider->active = 0;		
-		if (collider->group == GROUP_DIVER) {
-			add_rescue(1);
-			// Hide the "Get ->" indicator.
-			(collider + 1)->active = 0;
-		} else {
-			player->active = 0;
-		}
+		player->active = 0;
 		
 		add_score(collider->score);
 	}
@@ -369,7 +279,6 @@ void check_collision_against_player() {
 void check_collisions() {
 	FOREACH_ACTOR(act) {
 		collider = act;
-		check_collision_against_player_shot();
 		check_collision_against_player();
 	}
 }
@@ -377,7 +286,6 @@ void check_collisions() {
 void reset_actors_and_player() {
 	clear_actors();
 	init_actor(player, 116, 88, 2, 1, 2, 4);	
-	ply_shot->active = 0;
 }
 
 void set_score(unsigned int value) {
@@ -510,7 +418,6 @@ void initialize_level() {
 	level.ending = 0;
 	
 	clear_actors();
-	ply_shot->active = 0;
 	set_rescue(0);
 	
 	level.fish_score = 1 + level.number / 3;
@@ -525,7 +432,6 @@ void initialize_level() {
 	if (level.submarine_speed > PLAYER_SPEED) level.submarine_speed = PLAYER_SPEED;
 	if (level.diver_speed > PLAYER_SPEED) level.diver_speed = PLAYER_SPEED;
 	
-	level.diver_chance = 4 + level.number * 3 / 4;	
 	level.enemy_can_fire = 1;
 	level.show_diver_indicator = level.number < 2;
 	
@@ -589,17 +495,6 @@ void perform_level_end_sequence() {
 	}
 	
 	level.ending = 0;
-}
-
-void draw_book() {
-	static char frame;
-	static char tile;
-		
-	if (!animation_delay) frame += 4;
-	if (frame > 4) frame = 0;
-	
-	tile = 160 + frame;
-	draw_meta_sprite(player->x - 16, player->y, 2, 1, tile);
 }
 
 char gameplay_loop() {
@@ -671,7 +566,6 @@ char gameplay_loop() {
 		
 		SMS_initSprites();	
 
-		draw_book();
 		draw_actors();		
 
 		SMS_finalizeSprites();		
