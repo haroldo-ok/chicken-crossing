@@ -222,8 +222,8 @@ void handle_spawners() {
 				
 				switch (thing_to_spawn) {
 				case 0:
-					// Spawn a death knight
-					init_actor(act, 0, y, 2, 1, 66, 3);
+					// Spawn a red car
+					init_actor(act, 0, y, 3, 1, 66, 1);
 					act->spd_x = level.submarine_speed + boost;
 					act->group = GROUP_ENEMY_SUB;
 					act->score = level.submarine_score;
