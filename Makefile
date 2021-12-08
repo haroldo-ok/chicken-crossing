@@ -1,5 +1,5 @@
 PRJNAME := chicken_crossing
-OBJS := data.rel actor.rel shot.rel shots.rel map.rel score.rel chicken_crossing.rel
+OBJS := data.rel actor.rel chicken_crossing.rel
 
 all: $(PRJNAME).sms
 
