@@ -4,6 +4,7 @@
 #include "lib/SMSlib.h"
 #include "lib/PSGlib.h"
 #include "data.h"
+#include "actor.h"
 
 #define SCREEN_W (256)
 #define SCREEN_H (192)
@@ -37,26 +38,6 @@
 #define STATE_START (1)
 #define STATE_GAMEPLAY (2)
 #define STATE_GAMEOVER (3)
-
-typedef struct actor {
-	char active;
-	
-	int x, y;
-	int spd_x;
-	char facing_left;
-	char autofire;
-	
-	char char_w, char_h;
-	char pixel_w, pixel_h;
-	
-	unsigned char base_tile, frame_count;
-	unsigned char frame, frame_increment, frame_max;
-	
-	char group;
-	char col_x, col_y, col_w, col_h;
-	
-	unsigned int score;
-} actor;
 
 actor actors[MAX_ACTORS];
 
@@ -104,68 +85,10 @@ void add_score(unsigned int value);
 void add_rescue(int value);
 void add_life(int value);
 
-void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile) {
-	static char i, j;
-	static int sx, sy;
-	static unsigned char st;
-	
-	sy = y;
-	st = tile;
-	for (i = h; i; i--) {
-		if (y >= 0 && y < SCREEN_H) {
-			sx = x;
-			for (j = w; j; j--) {
-				if (sx >= 0 && sx < SCREEN_W) {
-					SMS_addSprite(sx, sy, tile);
-				}
-				sx += 8;
-				tile += 2;
-			}
-		}
-		sy += 16;
-	}
-}
-
-void init_actor(actor *act, int x, int y, int char_w, int char_h, unsigned char base_tile, unsigned char frame_count) {
-	static actor *sa;
-	sa = act;
-	
-	sa->active = 1;
-	
-	sa->x = x;
-	sa->y = y;
-	sa->spd_x = 0;
-	sa->facing_left = 1;
-	sa->autofire = 0;
-	
-	sa->char_w = char_w;
-	sa->char_h = char_h;
-	sa->pixel_w = char_w << 3;
-	sa->pixel_h = char_h << 4;
-	
-	sa->base_tile = base_tile;
-	sa->frame_count = frame_count;
-	sa->frame = 0;
-	sa->frame_increment = char_w * (char_h << 1);
-	sa->frame_max = sa->frame_increment * frame_count;
-	
-	sa->group = 0;
-	sa->col_w = sa->pixel_w - 4;
-	sa->col_h = sa->pixel_h - 4;
-	sa->col_x = (sa->pixel_w - sa->col_w) >> 1;
-	sa->col_y = (sa->pixel_h - sa->col_h) >> 1;
-	
-	sa->score = 0;
-}
-
 void clear_actors() {
 	FOREACH_ACTOR(act) {
 		act->active = 0;
 	}
-}
-
-void wait_frames(int wait_time) {
-	for (; wait_time; wait_time--) SMS_waitForVBlank();
 }
 
 void fire_shot(actor *shot, actor *shooter, char speed) {	
@@ -209,56 +132,9 @@ void fire_shot_left(actor *shot, actor *shooter, char speed) {
 	_shot->spd_x = -speed;
 }
 
-void move_actor(actor *act) {
-	static actor *_act, *_shot;
-	
-	if (!act->active) return;
-	
-	_act = act;
-	
-	if (_act->spd_x) {
-		_act->x += _act->spd_x;
-		
-		if (_act->spd_x < 0) {
-			if (_act->x + _act->pixel_w < 0) _act->active = 0;
-		} else {
-			if (_act->x >= SCREEN_W) _act->active = 0;
-		}				
-	}
-	
-	if (_act->autofire && level.enemy_can_fire) {
-		actor *_shot = _act + 1;		
-		fire_shot(_shot, _act, abs(_act->spd_x) + 1);
-		_shot->group = GROUP_ENEMY_SHOT;
-	}
-}
-
 void move_actors() {
 	FOREACH_ACTOR(act) {
 		move_actor(act);
-	}
-}
-
-void draw_actor(actor *act) {
-	static actor *_act;
-	static unsigned char frame_tile;
-	
-	if (!act->active) {
-		return;
-	}
-	
-	_act = act;
-	
-	frame_tile = _act->base_tile + _act->frame;
-	if (!_act->facing_left) {
-		frame_tile += _act->frame_max;
-	}
-	
-	draw_meta_sprite(_act->x, _act->y, _act->char_w, _act->char_h, frame_tile);	
-
-	if (!animation_delay) {
-		_act->frame += _act->frame_increment;
-		if (_act->frame >= _act->frame_max) _act->frame = 0;
 	}
 }
 
@@ -268,39 +144,15 @@ void draw_actors() {
 	}
 }
 
-void clear_sprites() {
-	SMS_initSprites();	
-	SMS_finalizeSprites();
-	SMS_copySpritestoSAT();
-}
-
 void interrupt_handler() {
-	static unsigned char scroll_x = 0;
-	
-	SMS_setBGScrollX(scroll_x);	
-	scroll_x -= 1;
-	
 	PSGFrame();
 	PSGSFXFrame();	
 }
 
 void load_standard_palettes() {
-	static unsigned char palette[16];
-	SMS_loadBGPalette(background_palette_bin);
-	
-	memcpy(palette, sprites_palette_bin, 16);
-	palette[0] = 0;
-	SMS_loadSpritePalette(palette);
-}
-
-void load_tile_zero() {
-	SMS_load1bppTiles(font_1bpp, 0, 8, 0, 1);
-}
-
-void configure_text() {
-	load_tile_zero();
-	SMS_load1bppTiles(font_1bpp, 352, font_1bpp_size, 0, 1);
-	SMS_configureTextRenderer(352 - 32);
+	SMS_loadBGPalette(sprites_palette_bin);
+	SMS_loadSpritePalette(sprites_palette_bin);
+	SMS_setSpritePaletteColor(0, 0);
 }
 
 void shuffle_random(char times) {
@@ -331,10 +183,6 @@ void handle_player_input() {
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
-		if (!ply_shot->active && !level.starting) {
-			PSGPlayNoRepeat(player_shot_psg);
-		}
-	
 		// Shoot
 		fire_shot_left(ply_shot, player, PLAYER_SHOT_SPEED);
 		
@@ -377,7 +225,6 @@ void handle_spawners() {
 					// Spawn a death knight
 					init_actor(act, 0, y, 2, 1, 66, 3);
 					act->spd_x = level.submarine_speed + boost;
-					act->autofire = 1;
 					act->group = GROUP_ENEMY_SUB;
 					act->score = level.submarine_score;
 					break;
@@ -418,20 +265,6 @@ void handle_spawners() {
 }
 
 void draw_background() {
-	unsigned int *ch = background_tilemap_bin;
-	
-	SMS_setNextTileatXY(0, 0);
-	for (char y = 0; y != 24; y++) {
-		for (char x = 0; x != 32; x++) {
-			unsigned int tile_number = *ch + 256;
-			if (y == 5) {
-				tile_number |= TILE_PRIORITY;
-			}
-			
-			SMS_setTile(tile_number);
-			ch++;
-		}
-	}
 }
 
 char is_touching(actor *act1, actor *act2) {
@@ -506,7 +339,6 @@ void check_collision_against_player_shot() {
 		if (collider->group != GROUP_DIVER) {
 			collider->active = 0;
 			add_score(collider->score);
-			PSGSFXPlay(enemy_death_psg, SFX_CHANNELS2AND3);
 		}
 		
 		if (collider->group != GROUP_DIVER && collider->group != GROUP_ENEMY_SHOT) {
@@ -526,7 +358,6 @@ void check_collision_against_player() {
 			add_rescue(1);
 			// Hide the "Get ->" indicator.
 			(collider + 1)->active = 0;
-			PSGSFXPlay(rescue_diver_psg, SFX_CHANNELS2AND3);
 		} else {
 			player->active = 0;
 		}
@@ -727,8 +558,6 @@ void flash_player_red(unsigned char delay) {
 }
 
 void perform_death_sequence() {
-	PSGSFXPlay(player_death_psg, SFX_CHANNELS2AND3);
-	
 	for (unsigned char i = 80; i; i--) {
 		SMS_waitForVBlank();
 		flash_player_red(8);
@@ -739,13 +568,10 @@ void perform_death_sequence() {
 
 void perform_level_end_sequence() {
 	level.ending = 1;
-	PSGSFXStop();
-	PSGPlayNoRepeat(level_end_psg);
 	
 	load_standard_palettes();	
 	while (rescue.value) {
 		if (rescue.value) {
-			PSGPlayNoRepeat(level_beep_psg);
 			add_score(level.diver_score << 1);
 			add_rescue(-1);
 
@@ -797,7 +623,6 @@ char gameplay_loop() {
 	SMS_disableLineInterrupt();
 
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
-	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 256);
 	
 	draw_background();
 
@@ -891,68 +716,11 @@ void print_number(char x, char y, unsigned int number, char extra_zero) {
 	}
 }
 
-char handle_gameover() {
-
-	/*
-	SMS_displayOff();
-	
-	load_standard_palettes();
-	clear_sprites();
-	
-	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 0);
-	SMS_loadTileMap(0, 0,background_tilemap_bin, background_tilemap_bin_size);		
-	configure_text();	
-	
-	// For some reason, the default text renderer is not working.
-	// TODO: Organize this mess
-	char *ch;
-	unsigned int base = 352 - 32;
-	
-	SMS_setNextTileatXY(11, 11);
-	for (ch = "Game Over!"; *ch; ch++) SMS_setTile(base + *ch);
-	
-	SMS_setNextTileatXY(11, 13);
-	for (ch = "Your score:"; *ch; ch++) SMS_setTile(base + *ch);
-	print_number(16, 14, score.value, 1);
-	
-	
-	SMS_setNextTileatXY(11, 16);
-	for (ch = "Your level:"; *ch; ch++) SMS_setTile(base + *ch);
-	print_number(16, 17, level.number, 0);
-
-	SMS_displayOn();	
-	*/
-	
-	wait_frames(180);
-	
+char handle_gameover() {	
 	return STATE_START;
 }
 
 char handle_title() {
-	reset_actors_and_player();
-
-	SMS_waitForVBlank();
-	SMS_displayOff();
-	SMS_disableLineInterrupt();
-	clear_sprites();
-
-	SMS_setBGScrollX(0);	
-	SMS_loadPSGaidencompressedTiles(jame_gam_tiles_psgcompr, 0);
-	SMS_loadTileMap(0, 0, jame_gam_tilemap_bin, jame_gam_tilemap_bin_size);
-	SMS_loadBGPalette(jame_gam_palette_bin);
-	
-	SMS_displayOn();	
-	wait_frames(90);
-
-	SMS_displayOff();
-
-	SMS_loadPSGaidencompressedTiles(title_tiles_psgcompr, 0);
-	SMS_loadTileMap(0, 0, title_tilemap_bin, title_tilemap_bin_size);
-	SMS_loadBGPalette(title_palette_bin);
-	
-	SMS_displayOn();	
-	wait_frames(90);
-
 	return STATE_GAMEPLAY;
 }
 

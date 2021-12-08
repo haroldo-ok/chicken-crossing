@@ -36,6 +36,7 @@ typedef struct actor {
 	
 	int x, y;
 	
+	int spd_x;
 	char facing_left;
 	
 	char char_w, char_h;
@@ -51,7 +52,10 @@ typedef struct actor {
 	unsigned char state;
 	int state_timer;
 	
+	char group;
 	char col_x, col_y, col_w, col_h;
+	
+	unsigned int score;
 } actor;
 
 void draw_meta_sprite(int x, int y, int w, int h, unsigned char tile);

@@ -98,6 +98,16 @@ void move_actor(actor *_act) {
 
 		act->curr_step = curr_step;
 	}
+
+	if (_act->spd_x) {
+		_act->x += _act->spd_x;
+		
+		if (_act->spd_x < 0) {
+			if (_act->x + _act->pixel_w < 0) _act->active = 0;
+		} else {
+			if (_act->x >= SCREEN_W) _act->active = 0;
+		}				
+	}
 	
 	if (act->state_timer) act->state_timer--;
 }
