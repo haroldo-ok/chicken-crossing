@@ -109,6 +109,7 @@ void interrupt_handler() {
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
+	SMS_setBGPaletteColor(0, 0x2A);
 	SMS_setSpritePaletteColor(0, 0);
 }
 
@@ -469,36 +470,7 @@ void initialize_level() {
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
-void flash_player_red(unsigned char delay) {
-	static unsigned char counter;
-	static unsigned char flag;
-	
-	if (counter > delay) counter = delay;
-	if (counter) {
-		counter--;
-		return;
-	}
-	
-	counter = delay;
-	
-	SMS_loadSpritePalette(sprites_palette_bin);
-	SMS_setSpritePaletteColor(0, 0);
-	
-	flag = !flag;
-	if (flag) {
-		SMS_setSpritePaletteColor(5, 0x1B);
-		SMS_setSpritePaletteColor(6, 0x06);
-		SMS_setSpritePaletteColor(7, 0x01);
-	}
-	
-}
-
 void perform_death_sequence() {
-	for (unsigned char i = 80; i; i--) {
-		SMS_waitForVBlank();
-		flash_player_red(8);
-	}
-	
 	load_standard_palettes();
 }
 
@@ -603,8 +575,6 @@ char gameplay_loop() {
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 
-		load_standard_palettes();
-		
 		draw_level_number();
 		draw_score_if_needed();
 		draw_rescue_if_needed();
