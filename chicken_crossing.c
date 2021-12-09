@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 #include "lib/SMSlib.h"
 #include "lib/PSGlib.h"
@@ -9,27 +8,25 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
+#define MAX_PLAYERS (4)
 #define MAX_SPAWNERS (5)
-#define MAX_ACTORS (2 + MAX_SPAWNERS * 2)
+#define MAX_ACTORS (MAX_PLAYERS + MAX_SPAWNERS * 2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 	
 #define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (3)
+#define PLAYER_KNOCKBACK_SPEED (5)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
-#define PLAYER_BOTTOM (146)
+#define PLAYER_BOTTOM (SCREEN_H - 24)
 
 #define GROUP_RED_CAR (1)
 #define GROUP_BIKE (2)
 
-#define SCORE_DIGITS (6)
+#define SCORE_DIGITS (3)
 
-#define LEVEL_DIGITS (3)
-
-#define RESCUE_CHARS (6)
-
-#define LIFE_CHARS (6)
+#define TIMER_DIGITS (3)
 
 #define STATE_START (1)
 #define STATE_GAMEPLAY (2)
@@ -37,35 +34,33 @@
 
 actor actors[MAX_ACTORS];
 
-actor *player = actors;
-actor *first_spawner = actors + 2;
+actor *player1 = actors;
+actor *player2 = actors + 1;
+actor *player3 = actors + 2;
+actor *player4 = actors + 3;
+actor *first_spawner = actors + MAX_PLAYERS;
 
 int animation_delay;
 
-struct score {
+typedef struct score_data {
+	char x, y;
 	unsigned int value;
 	char dirty;
-} score;
+} score_data;
 
-struct rescue {
-	int value;
-	char dirty;
-} rescue;
+score_data scores[MAX_PLAYERS];
+score_data *score1 = scores;
+score_data *score2 = scores + 1;
+score_data *score3 = scores + 2;
+score_data *score4 = scores + 3;
 
-struct life {
-	int value;
-	char dirty;
-} life;
+score_data timer;
 
 struct level {
 	unsigned int number;
 	char starting;
 	char ending;
 
-	unsigned int submarine_score;
-	unsigned int fish_score;
-	unsigned int diver_score;
-	
 	unsigned char submarine_speed;
 	unsigned char fish_speed;
 	unsigned char diver_speed;
@@ -75,9 +70,7 @@ struct level {
 	char show_diver_indicator;
 } level;
 
-void add_score(unsigned int value);
-void add_rescue(int value);
-void add_life(int value);
+void add_score(score_data *score, unsigned int value);
 
 void clear_actors() {
 	FOREACH_ACTOR(act) {
@@ -105,6 +98,7 @@ void interrupt_handler() {
 void load_standard_palettes() {
 	SMS_loadBGPalette(sprites_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
+	SMS_setBGPaletteColor(0, 0x2A);
 	SMS_setSpritePaletteColor(0, 0);
 }
 
@@ -114,29 +108,92 @@ void shuffle_random(char times) {
 	}
 }
 
+void player_knockback(actor *ply) {
+	if (!ply->state) return;	
+	
+	if (!ply->state_timer) {
+		ply->state = 0;
+		return;
+	}
+	
+	if (ply->y < PLAYER_BOTTOM) {
+		ply->y += PLAYER_KNOCKBACK_SPEED;
+	} else {
+		ply->y = PLAYER_BOTTOM;
+	}
+	
+	ply->state_timer--;
+}
+
+void check_player_reached_top(actor *ply, score_data *score) {
+	if (ply->y > PLAYER_TOP + PLAYER_SPEED) return;
+	
+	ply->y = PLAYER_BOTTOM;
+	add_score(score, 1);
+}
+
 void handle_player_input() {
-	unsigned char joy = SMS_getKeysStatus();
-	
-	if (joy & PORT_A_KEY_UP) {
-		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
-		shuffle_random(1);
-	} else if (joy & PORT_A_KEY_DOWN) {
-		if (player->y < PLAYER_BOTTOM) player->y += PLAYER_SPEED;
-		shuffle_random(2);
+	unsigned int joy = SMS_getKeysStatus();
+
+	// Player 1
+	if (!player1->state) {
+		if (joy & PORT_A_KEY_UP) {
+			if (player1->y > PLAYER_TOP) player1->y -= PLAYER_SPEED;
+			player1->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_A_KEY_DOWN) {
+			if (player1->y < PLAYER_BOTTOM) player1->y += PLAYER_SPEED;
+			player1->facing_left = 1;
+			shuffle_random(2);
+		}		
 	}
+	player_knockback(player1);
+	check_player_reached_top(player1, score1);
 	
-	if (joy & PORT_A_KEY_LEFT) {		
-		if (player->x > PLAYER_LEFT) player->x -= PLAYER_SPEED;
-		player->facing_left = 1;
-		shuffle_random(3);
-	} else if (joy & PORT_A_KEY_RIGHT) {
-		if (player->x < SCREEN_W - player->pixel_w) player->x += PLAYER_SPEED;
-		player->facing_left = 0;
-		shuffle_random(4);
+	// Player 2
+	if (!player2->state) {
+		if (joy & PORT_A_KEY_2) {
+			if (player2->y > PLAYER_TOP) player2->y -= PLAYER_SPEED;
+			player2->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_A_KEY_1) {
+			if (player2->y < PLAYER_BOTTOM) player2->y += PLAYER_SPEED;
+			player2->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
-	
-	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
+	player_knockback(player2);
+	check_player_reached_top(player2, score2);
+
+	// Player 3
+	if (!player3->state) {
+		if (joy & PORT_B_KEY_UP) {
+			if (player3->y > PLAYER_TOP) player3->y -= PLAYER_SPEED;
+			player3->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_B_KEY_DOWN) {
+			if (player3->y < PLAYER_BOTTOM) player3->y += PLAYER_SPEED;
+			player3->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
+	player_knockback(player3);
+	check_player_reached_top(player3, score3);
+
+	// Player 4
+	if (!player4->state) {
+		if (joy & PORT_B_KEY_2) {
+			if (player4->y > PLAYER_TOP) player4->y -= PLAYER_SPEED;
+			player4->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_B_KEY_1) {
+			if (player4->y < PLAYER_BOTTOM) player4->y += PLAYER_SPEED;
+			player4->facing_left = 1;
+			shuffle_random(2);
+		}
+	}
+	player_knockback(player4);
+	check_player_reached_top(player4, score4);
 }
 
 void adjust_facing(actor *act, char facing_left) {
@@ -173,7 +230,6 @@ void handle_spawners() {
 					init_actor(act, 0, y, 3, 1, 66, 1);
 					act->spd_x = level.submarine_speed + boost;
 					act->group = GROUP_RED_CAR;
-					act->score = level.submarine_score;
 					break;
 					
 				case 1:
@@ -182,11 +238,9 @@ void handle_spawners() {
 					init_actor(act2, -64, y, 2, 1, 128, 1);
 					act->spd_x = level.fish_speed + boost;
 					act->group = GROUP_BIKE;
-					act->score = level.fish_score;
 
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
-					act2->score = act->score;
 					break;
 				}
 				
@@ -263,52 +317,54 @@ char is_touching(actor *act1, actor *act2) {
 // Made global for performance
 actor *collider;
 
-void check_collision_against_player() {	
+void check_collision_against_player(actor *ply) {	
 	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (player->active && is_touching(collider, player)) {
-		collider->active = 0;		
-		player->active = 0;
-		
-		add_score(collider->score);
+	if (player1->active && is_touching(collider, ply)) {
+		ply->state = 1;
+		ply->state_timer = 20;
 	}
 }
 
 void check_collisions() {
 	FOREACH_ACTOR(act) {
 		collider = act;
-		check_collision_against_player();
+		check_collision_against_player(player1);
+		check_collision_against_player(player2);
+		check_collision_against_player(player3);
+		check_collision_against_player(player4);
 	}
 }
 
 void reset_actors_and_player() {
 	clear_actors();
-	init_actor(player, 116, 88, 2, 1, 2, 4);	
+	init_actor(player1, 64, PLAYER_BOTTOM, 2, 1, 2, 4);
+	init_actor(player2, 106, PLAYER_BOTTOM, 2, 1, 2, 4);	
+	init_actor(player3, 150, PLAYER_BOTTOM, 2, 1, 2, 4);	
+	init_actor(player4, 192, PLAYER_BOTTOM, 2, 1, 2, 4);	
 }
 
-void set_score(unsigned int value) {
-	score.value = value;
-	score.dirty = 1;
+void set_score(score_data *score, unsigned int value) {
+	score->value = value;
+	score->dirty = 1;
 }
 
-void add_score(unsigned int value) {
-	set_score(score.value + value);
+void add_score(score_data *score, unsigned int value) {
+	set_score(score, score->value + value);
 }
 
-void draw_score() {
+void draw_score(score_data *score) {
 	static char buffer[SCORE_DIGITS];
 	
 	memset(buffer, -1, sizeof buffer);
 	
-	// Last digit is always zero
 	char *d = buffer + SCORE_DIGITS - 1;
 	*d = 0;
-	d--;
 	
 	// Calculate the digits
-	unsigned int remaining = score.value;
+	unsigned int remaining = score->value;
 	while (remaining) {
 		*d = remaining % 10;		
 		remaining = remaining / 10;
@@ -317,100 +373,17 @@ void draw_score() {
 		
 	// Draw the digits
 	d = buffer;
-	SMS_setNextTileatXY(((32 - SCORE_DIGITS) >> 1) + 1, 0);
+	SMS_setNextTileatXY(score->x, score->y);
 	for (char i = SCORE_DIGITS; i; i--, d++) {
 		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
 	}
 }
 
-void draw_score_if_needed() {
-	if (score.dirty) draw_score();
+void draw_score_if_needed(score_data *score) {
+	if (score->dirty) draw_score(score);
 }
 
-void draw_level_number() {
-	static char buffer[LEVEL_DIGITS];
-	
-	memset(buffer, -1, sizeof buffer);
-	
-	// Calculate the digits
-	char *d = buffer + LEVEL_DIGITS - 1;
-	unsigned int remaining = level.number;
-	do {
-		*d = remaining % 10;		
-		remaining = remaining / 10;
-		d--;
-	} while (remaining);
-		
-	// Draw the digits
-	d = buffer;
-	SMS_setNextTileatXY(2, 0);
-	for (char i = LEVEL_DIGITS; i; i--, d++) {
-		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
-	}
-}
-
-void set_rescue(int value) {
-	if (value < 0) value = 0;
-	if (value > RESCUE_CHARS) value = RESCUE_CHARS;
-	rescue.value = value;
-	rescue.dirty = 1;	
-}
-
-void add_rescue(int value) {
-	set_rescue(rescue.value + value);	
-}
-
-void draw_rescue() {
-	static char blink_control;
-	
-	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 1);
-	
-	int remaining = rescue.value;
-	
-	// Blink if all divers rescued.
-	if (rescue.value == RESCUE_CHARS) {
-		if (blink_control & 0x10) remaining = 0;
-		blink_control++;
-	}
-	
-	for (char i = RESCUE_CHARS; i; i--) {
-		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
-		remaining --;
-	}
-}
-
-void draw_rescue_if_needed() {
-	if (rescue.dirty) draw_rescue();
-}
-
-void set_life(int value) {
-	if (value < 0) value = 0;
-	life.value = value;
-	life.dirty = 1;	
-}
-
-void add_life(int value) {
-	set_life(life.value + value);	
-}
-
-void draw_life() {
-	SMS_setNextTileatXY(2, 1);
-	
-	int remaining = life.value;
-	for (char i = LIFE_CHARS; i; i--) {
-		SMS_setTile((remaining > 0 ? 61 : 60) + TILE_USE_SPRITE_PALETTE);
-		remaining --;
-	}
-}
-
-void draw_life_if_needed() {
-	if (rescue.dirty) draw_life();
-}
-
-void handle_oxygen() {
-	if (level.starting) {			
-		level.starting = 0;
-	}
+void draw_timer_number() {
 }
 
 void initialize_level() {
@@ -418,12 +391,7 @@ void initialize_level() {
 	level.ending = 0;
 	
 	clear_actors();
-	set_rescue(0);
-	
-	level.fish_score = 1 + level.number / 3;
-	level.submarine_score = level.fish_score << 1;
-	level.diver_score = level.fish_score + level.submarine_score;
-	
+		
 	level.fish_speed = 1 + level.number / 3;
 	level.submarine_speed = 1 + level.number / 5;
 	level.diver_speed = 1 + level.number / 6;
@@ -439,61 +407,11 @@ void initialize_level() {
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
-void flash_player_red(unsigned char delay) {
-	static unsigned char counter;
-	static unsigned char flag;
-	
-	if (counter > delay) counter = delay;
-	if (counter) {
-		counter--;
-		return;
-	}
-	
-	counter = delay;
-	
-	SMS_loadSpritePalette(sprites_palette_bin);
-	SMS_setSpritePaletteColor(0, 0);
-	
-	flag = !flag;
-	if (flag) {
-		SMS_setSpritePaletteColor(5, 0x1B);
-		SMS_setSpritePaletteColor(6, 0x06);
-		SMS_setSpritePaletteColor(7, 0x01);
-	}
-	
-}
-
 void perform_death_sequence() {
-	for (unsigned char i = 80; i; i--) {
-		SMS_waitForVBlank();
-		flash_player_red(8);
-	}
-	
 	load_standard_palettes();
 }
 
 void perform_level_end_sequence() {
-	level.ending = 1;
-	
-	load_standard_palettes();	
-	while (rescue.value) {
-		if (rescue.value) {
-			add_score(level.diver_score << 1);
-			add_rescue(-1);
-
-			wait_frames(20);
-		}
-		
-		SMS_initSprites();	
-		draw_actors();		
-		SMS_finalizeSprites();
-		SMS_waitForVBlank();
-		SMS_copySpritestoSAT();
-		
-		draw_score_if_needed();
-		draw_rescue_if_needed();
-	}
-	
 	level.ending = 0;
 }
 
@@ -501,13 +419,27 @@ char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
 	int torpedo_frame = 0;
+	int timer_delay = 30;
 	
 	animation_delay = 0;
 	
-	set_score(0);
-	set_rescue(0);
-	set_life(4);
+	set_score(score1, 0);
+	set_score(score2, 0);
+	set_score(score3, 0);
+	set_score(score4, 0);
+	score1->x = 7;
+	score1->y = 1;
+	score2->x = 12;
+	score2->y = 1;
+	score3->x = 18;
+	score3->y = 1;
+	score4->x = 23;
+	score4->y = 1;
 	
+	set_score(&timer, 120);
+	timer.x = 14;
+	timer.y = 0;
+
 	level.number = 1;
 	level.starting = 1;
 
@@ -534,33 +466,20 @@ char gameplay_loop() {
 	initialize_level();
 	
 	while(1) {	
-		if (rescue.value == RESCUE_CHARS) {
-			perform_level_end_sequence();
-			level.number++;
-			initialize_level();
-			player->active = 1;
-		}
-
-		if (!player->active) {
-			add_life(-1);
+		if (!timer.value) return STATE_GAMEOVER;
+	
+		if (!player1->active) {
 			reset_actors_and_player();
 			level.starting = 1;
 		}
-		
-		if (!life.value) {
-			return STATE_GAMEOVER;
-		}
 	
 		handle_player_input();
-		handle_oxygen();
 		
-		if (!level.starting) {			
-			handle_spawners();
-			move_actors();
-			check_collisions();
-		}
+		handle_spawners();
+		move_actors();
+		check_collisions();
 		
-		if (!player->active) {
+		if (!player1->active) {
 			perform_death_sequence();
 		}
 		
@@ -573,12 +492,13 @@ char gameplay_loop() {
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 
-		load_standard_palettes();
+		draw_timer_number();
 		
-		draw_level_number();
-		draw_score_if_needed();
-		draw_rescue_if_needed();
-		draw_life_if_needed();
+		draw_score_if_needed(score1);
+		draw_score_if_needed(score2);
+		draw_score_if_needed(score3);
+		draw_score_if_needed(score4);
+		draw_score_if_needed(&timer);
 				
 		frame += 6;
 		if (frame > 12) frame = 0;
@@ -591,6 +511,12 @@ char gameplay_loop() {
 		
 		animation_delay--;
 		if (animation_delay < 0) animation_delay = ANIMATION_SPEED;
+		
+		timer_delay--;
+		if (timer_delay < 0) {
+			add_score(&timer, -1);
+			timer_delay = 30;
+		};
 	}
 }
 
@@ -611,6 +537,7 @@ void print_number(char x, char y, unsigned int number, char extra_zero) {
 }
 
 char handle_gameover() {	
+	wait_frames(180);
 	return STATE_START;
 }
 
