@@ -291,14 +291,13 @@ char is_touching(actor *act1, actor *act2) {
 // Made global for performance
 actor *collider;
 
-void check_collision_against_player() {	
+void check_collision_against_player(actor *ply) {	
 	if (!collider->active || !collider->group) {
 		return;
 	}
 
-	if (player1->active && is_touching(collider, player1)) {
-		collider->active = 0;		
-		player1->active = 0;
+	if (player1->active && is_touching(collider, ply)) {
+		ply->active = 0;
 		
 		add_score(collider->score);
 	}
@@ -307,7 +306,10 @@ void check_collision_against_player() {
 void check_collisions() {
 	FOREACH_ACTOR(act) {
 		collider = act;
-		check_collision_against_player();
+		check_collision_against_player(player1);
+		check_collision_against_player(player2);
+		check_collision_against_player(player3);
+		check_collision_against_player(player4);
 	}
 }
 
