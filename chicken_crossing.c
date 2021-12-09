@@ -28,10 +28,6 @@
 
 #define LEVEL_DIGITS (3)
 
-#define RESCUE_CHARS (6)
-
-#define LIFE_CHARS (6)
-
 #define STATE_START (1)
 #define STATE_GAMEPLAY (2)
 #define STATE_GAMEOVER (3)
@@ -58,16 +54,6 @@ score_data *score2 = scores + 1;
 score_data *score3 = scores + 2;
 score_data *score4 = scores + 3;
 
-struct rescue {
-	int value;
-	char dirty;
-} rescue;
-
-struct life {
-	int value;
-	char dirty;
-} life;
-
 struct level {
 	unsigned int number;
 	char starting;
@@ -83,8 +69,6 @@ struct level {
 } level;
 
 void add_score(score_data *score, unsigned int value);
-void add_rescue(int value);
-void add_life(int value);
 
 void clear_actors() {
 	FOREACH_ACTOR(act) {
@@ -419,76 +403,11 @@ void draw_level_number() {
 	}
 }
 
-void set_rescue(int value) {
-	if (value < 0) value = 0;
-	if (value > RESCUE_CHARS) value = RESCUE_CHARS;
-	rescue.value = value;
-	rescue.dirty = 1;	
-}
-
-void add_rescue(int value) {
-	set_rescue(rescue.value + value);	
-}
-
-void draw_rescue() {
-	static char blink_control;
-	
-	SMS_setNextTileatXY(32 - RESCUE_CHARS - 2, 1);
-	
-	int remaining = rescue.value;
-	
-	// Blink if all divers rescued.
-	if (rescue.value == RESCUE_CHARS) {
-		if (blink_control & 0x10) remaining = 0;
-		blink_control++;
-	}
-	
-	for (char i = RESCUE_CHARS; i; i--) {
-		SMS_setTile((remaining > 0 ? 63 : 62) + TILE_USE_SPRITE_PALETTE);
-		remaining --;
-	}
-}
-
-void draw_rescue_if_needed() {
-	if (rescue.dirty) draw_rescue();
-}
-
-void set_life(int value) {
-	if (value < 0) value = 0;
-	life.value = value;
-	life.dirty = 1;	
-}
-
-void add_life(int value) {
-	set_life(life.value + value);	
-}
-
-void draw_life() {
-	SMS_setNextTileatXY(2, 1);
-	
-	int remaining = life.value;
-	for (char i = LIFE_CHARS; i; i--) {
-		SMS_setTile((remaining > 0 ? 61 : 60) + TILE_USE_SPRITE_PALETTE);
-		remaining --;
-	}
-}
-
-void draw_life_if_needed() {
-	if (rescue.dirty) draw_life();
-}
-
-void handle_oxygen() {
-	if (level.starting) {			
-		level.starting = 0;
-	}
-}
-
 void initialize_level() {
 	level.starting = 1;
 	level.ending = 0;
 	
 	clear_actors();
-	set_rescue(0);
 		
 	level.fish_speed = 1 + level.number / 3;
 	level.submarine_speed = 1 + level.number / 5;
@@ -529,9 +448,6 @@ char gameplay_loop() {
 	score3->x = 18;
 	score4->x = 23;
 	
-	set_rescue(0);
-	set_life(4);
-	
 	level.number = 1;
 	level.starting = 1;
 
@@ -558,31 +474,16 @@ char gameplay_loop() {
 	initialize_level();
 	
 	while(1) {	
-		if (rescue.value == RESCUE_CHARS) {
-			perform_level_end_sequence();
-			level.number++;
-			initialize_level();
-			player1->active = 1;
-		}
-
 		if (!player1->active) {
-			add_life(-1);
 			reset_actors_and_player();
 			level.starting = 1;
 		}
-		
-		if (!life.value) {
-			return STATE_GAMEOVER;
-		}
 	
 		handle_player_input();
-		handle_oxygen();
 		
-		if (!level.starting) {			
-			handle_spawners();
-			move_actors();
-			check_collisions();
-		}
+		handle_spawners();
+		move_actors();
+		check_collisions();
 		
 		if (!player1->active) {
 			perform_death_sequence();
@@ -603,9 +504,6 @@ char gameplay_loop() {
 		draw_score_if_needed(score2);
 		draw_score_if_needed(score3);
 		draw_score_if_needed(score4);
-		
-		draw_rescue_if_needed();
-		draw_life_if_needed();
 				
 		frame += 6;
 		if (frame > 12) frame = 0;
