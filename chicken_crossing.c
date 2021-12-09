@@ -26,7 +26,7 @@
 
 #define SCORE_DIGITS (3)
 
-#define LEVEL_DIGITS (3)
+#define TIMER_DIGITS (3)
 
 #define STATE_START (1)
 #define STATE_GAMEPLAY (2)
@@ -43,7 +43,7 @@ actor *first_spawner = actors + MAX_PLAYERS;
 int animation_delay;
 
 typedef struct score_data {
-	char x;
+	char x, y;
 	unsigned int value;
 	char dirty;
 } score_data;
@@ -53,6 +53,8 @@ score_data *score1 = scores;
 score_data *score2 = scores + 1;
 score_data *score3 = scores + 2;
 score_data *score4 = scores + 3;
+
+score_data timer;
 
 struct level {
 	unsigned int number;
@@ -371,7 +373,7 @@ void draw_score(score_data *score) {
 		
 	// Draw the digits
 	d = buffer;
-	SMS_setNextTileatXY(score->x, 0);
+	SMS_setNextTileatXY(score->x, score->y);
 	for (char i = SCORE_DIGITS; i; i--, d++) {
 		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
 	}
@@ -381,26 +383,7 @@ void draw_score_if_needed(score_data *score) {
 	if (score->dirty) draw_score(score);
 }
 
-void draw_level_number() {
-	static char buffer[LEVEL_DIGITS];
-	
-	memset(buffer, -1, sizeof buffer);
-	
-	// Calculate the digits
-	char *d = buffer + LEVEL_DIGITS - 1;
-	unsigned int remaining = level.number;
-	do {
-		*d = remaining % 10;		
-		remaining = remaining / 10;
-		d--;
-	} while (remaining);
-		
-	// Draw the digits
-	d = buffer;
-	SMS_setNextTileatXY(2, 0);
-	for (char i = LEVEL_DIGITS; i; i--, d++) {
-		SMS_setTile((*d << 1) + 237 + TILE_USE_SPRITE_PALETTE);
-	}
+void draw_timer_number() {
 }
 
 void initialize_level() {
@@ -436,6 +419,7 @@ char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
 	int torpedo_frame = 0;
+	int timer_delay = 30;
 	
 	animation_delay = 0;
 	
@@ -444,10 +428,18 @@ char gameplay_loop() {
 	set_score(score3, 0);
 	set_score(score4, 0);
 	score1->x = 7;
+	score1->y = 1;
 	score2->x = 12;
+	score2->y = 1;
 	score3->x = 18;
+	score3->y = 1;
 	score4->x = 23;
+	score4->y = 1;
 	
+	set_score(&timer, 120);
+	timer.x = 14;
+	timer.y = 0;
+
 	level.number = 1;
 	level.starting = 1;
 
@@ -474,6 +466,8 @@ char gameplay_loop() {
 	initialize_level();
 	
 	while(1) {	
+		if (!timer.value) return STATE_GAMEOVER;
+	
 		if (!player1->active) {
 			reset_actors_and_player();
 			level.starting = 1;
@@ -498,12 +492,13 @@ char gameplay_loop() {
 		SMS_waitForVBlank();
 		SMS_copySpritestoSAT();
 
-		draw_level_number();
+		draw_timer_number();
 		
 		draw_score_if_needed(score1);
 		draw_score_if_needed(score2);
 		draw_score_if_needed(score3);
 		draw_score_if_needed(score4);
+		draw_score_if_needed(&timer);
 				
 		frame += 6;
 		if (frame > 12) frame = 0;
@@ -516,6 +511,12 @@ char gameplay_loop() {
 		
 		animation_delay--;
 		if (animation_delay < 0) animation_delay = ANIMATION_SPEED;
+		
+		timer_delay--;
+		if (timer_delay < 0) {
+			add_score(&timer, -1);
+			timer_delay = 30;
+		};
 	}
 }
 
@@ -536,6 +537,7 @@ void print_number(char x, char y, unsigned int number, char extra_zero) {
 }
 
 char handle_gameover() {	
+	wait_frames(180);
 	return STATE_START;
 }
 
