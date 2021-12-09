@@ -17,6 +17,7 @@
 #define ANIMATION_SPEED (3)
 
 #define PLAYER_SPEED (3)
+#define PLAYER_KNOCKBACK_SPEED (5)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
 #define PLAYER_BOTTOM (SCREEN_H - 24)
@@ -119,52 +120,81 @@ void shuffle_random(char times) {
 	}
 }
 
+void player_knockback(actor *ply) {
+	if (!ply->state) return;	
+	
+	if (!ply->state_timer) {
+		ply->state = 0;
+		return;
+	}
+	
+	if (ply->y < PLAYER_BOTTOM) {
+		ply->y += PLAYER_KNOCKBACK_SPEED;
+	} else {
+		ply->y = PLAYER_BOTTOM;
+	}
+	
+	ply->state_timer--;
+}
+
 void handle_player_input() {
 	unsigned int joy = SMS_getKeysStatus();
 
 	// Player 1
-	if (joy & PORT_A_KEY_UP) {
-		if (player1->y > PLAYER_TOP) player1->y -= PLAYER_SPEED;
-		player1->facing_left = 0;
-		shuffle_random(1);
-	} else if (joy & PORT_A_KEY_DOWN) {
-		if (player1->y < PLAYER_BOTTOM) player1->y += PLAYER_SPEED;
-		player1->facing_left = 1;
-		shuffle_random(2);
+	if (!player1->state) {
+		if (joy & PORT_A_KEY_UP) {
+			if (player1->y > PLAYER_TOP) player1->y -= PLAYER_SPEED;
+			player1->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_A_KEY_DOWN) {
+			if (player1->y < PLAYER_BOTTOM) player1->y += PLAYER_SPEED;
+			player1->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
+	player_knockback(player1);
 	
 	// Player 2
-	if (joy & PORT_A_KEY_2) {
-		if (player2->y > PLAYER_TOP) player2->y -= PLAYER_SPEED;
-		player2->facing_left = 0;
-		shuffle_random(1);
-	} else if (joy & PORT_A_KEY_1) {
-		if (player2->y < PLAYER_BOTTOM) player2->y += PLAYER_SPEED;
-		player2->facing_left = 1;
-		shuffle_random(2);
+	if (!player2->state) {
+		if (joy & PORT_A_KEY_2) {
+			if (player2->y > PLAYER_TOP) player2->y -= PLAYER_SPEED;
+			player2->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_A_KEY_1) {
+			if (player2->y < PLAYER_BOTTOM) player2->y += PLAYER_SPEED;
+			player2->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
+	player_knockback(player2);
 
 	// Player 3
-	if (joy & PORT_B_KEY_UP) {
-		if (player3->y > PLAYER_TOP) player3->y -= PLAYER_SPEED;
-		player3->facing_left = 0;
-		shuffle_random(1);
-	} else if (joy & PORT_B_KEY_DOWN) {
-		if (player3->y < PLAYER_BOTTOM) player3->y += PLAYER_SPEED;
-		player3->facing_left = 1;
-		shuffle_random(2);
+	if (!player3->state) {
+		if (joy & PORT_B_KEY_UP) {
+			if (player3->y > PLAYER_TOP) player3->y -= PLAYER_SPEED;
+			player3->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_B_KEY_DOWN) {
+			if (player3->y < PLAYER_BOTTOM) player3->y += PLAYER_SPEED;
+			player3->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
+	player_knockback(player3);
 
 	// Player 4
-	if (joy & PORT_B_KEY_2) {
-		if (player4->y > PLAYER_TOP) player4->y -= PLAYER_SPEED;
-		player4->facing_left = 0;
-		shuffle_random(1);
-	} else if (joy & PORT_B_KEY_1) {
-		if (player4->y < PLAYER_BOTTOM) player4->y += PLAYER_SPEED;
-		player4->facing_left = 1;
-		shuffle_random(2);
+	if (!player4->state) {
+		if (joy & PORT_B_KEY_2) {
+			if (player4->y > PLAYER_TOP) player4->y -= PLAYER_SPEED;
+			player4->facing_left = 0;
+			shuffle_random(1);
+		} else if (joy & PORT_B_KEY_1) {
+			if (player4->y < PLAYER_BOTTOM) player4->y += PLAYER_SPEED;
+			player4->facing_left = 1;
+			shuffle_random(2);
+		}
 	}
+	player_knockback(player4);
 }
 
 void adjust_facing(actor *act, char facing_left) {
@@ -297,7 +327,8 @@ void check_collision_against_player(actor *ply) {
 	}
 
 	if (player1->active && is_touching(collider, ply)) {
-		ply->active = 0;
+		ply->state = 1;
+		ply->state_timer = 20;
 		
 		add_score(collider->score);
 	}
