@@ -9,8 +9,9 @@
 #define SCREEN_H (192)
 #define SCROLL_H (224)
 
+#define MAX_PLAYERS (4)
 #define MAX_SPAWNERS (5)
-#define MAX_ACTORS (2 + MAX_SPAWNERS * 2)
+#define MAX_ACTORS (MAX_PLAYERS + MAX_SPAWNERS * 2)
 #define FOREACH_ACTOR(act) actor *act = actors; for (char idx_##act = 0; idx_##act != MAX_ACTORS; idx_##act++, act++)
 	
 #define ANIMATION_SPEED (3)
@@ -18,7 +19,7 @@
 #define PLAYER_SPEED (3)
 #define PLAYER_TOP (32)
 #define PLAYER_LEFT (8)
-#define PLAYER_BOTTOM (146)
+#define PLAYER_BOTTOM (SCREEN_H - 24)
 
 #define GROUP_RED_CAR (1)
 #define GROUP_BIKE (2)
@@ -37,8 +38,11 @@
 
 actor actors[MAX_ACTORS];
 
-actor *player = actors;
-actor *first_spawner = actors + 2;
+actor *player1 = actors;
+actor *player2 = actors + 1;
+actor *player3 = actors + 2;
+actor *player4 = actors + 3;
+actor *first_spawner = actors + MAX_PLAYERS;
 
 int animation_delay;
 
@@ -118,21 +122,11 @@ void handle_player_input() {
 	unsigned char joy = SMS_getKeysStatus();
 	
 	if (joy & PORT_A_KEY_UP) {
-		if (player->y > PLAYER_TOP) player->y -= PLAYER_SPEED;
+		if (player1->y > PLAYER_TOP) player1->y -= PLAYER_SPEED;
 		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_DOWN) {
-		if (player->y < PLAYER_BOTTOM) player->y += PLAYER_SPEED;
+		if (player1->y < PLAYER_BOTTOM) player1->y += PLAYER_SPEED;
 		shuffle_random(2);
-	}
-	
-	if (joy & PORT_A_KEY_LEFT) {		
-		if (player->x > PLAYER_LEFT) player->x -= PLAYER_SPEED;
-		player->facing_left = 1;
-		shuffle_random(3);
-	} else if (joy & PORT_A_KEY_RIGHT) {
-		if (player->x < SCREEN_W - player->pixel_w) player->x += PLAYER_SPEED;
-		player->facing_left = 0;
-		shuffle_random(4);
 	}
 	
 	if (joy & (PORT_A_KEY_1 | PORT_A_KEY_2)) {
@@ -268,9 +262,9 @@ void check_collision_against_player() {
 		return;
 	}
 
-	if (player->active && is_touching(collider, player)) {
+	if (player1->active && is_touching(collider, player1)) {
 		collider->active = 0;		
-		player->active = 0;
+		player1->active = 0;
 		
 		add_score(collider->score);
 	}
@@ -285,7 +279,10 @@ void check_collisions() {
 
 void reset_actors_and_player() {
 	clear_actors();
-	init_actor(player, 116, 88, 2, 1, 2, 4);	
+	init_actor(player1, 64, PLAYER_BOTTOM, 2, 1, 2, 4);
+	init_actor(player2, 106, PLAYER_BOTTOM, 2, 1, 2, 4);	
+	init_actor(player3, 150, PLAYER_BOTTOM, 2, 1, 2, 4);	
+	init_actor(player4, 192, PLAYER_BOTTOM, 2, 1, 2, 4);	
 }
 
 void set_score(unsigned int value) {
@@ -538,10 +535,10 @@ char gameplay_loop() {
 			perform_level_end_sequence();
 			level.number++;
 			initialize_level();
-			player->active = 1;
+			player1->active = 1;
 		}
 
-		if (!player->active) {
+		if (!player1->active) {
 			add_life(-1);
 			reset_actors_and_player();
 			level.starting = 1;
@@ -560,7 +557,7 @@ char gameplay_loop() {
 			check_collisions();
 		}
 		
-		if (!player->active) {
+		if (!player1->active) {
 			perform_death_sequence();
 		}
 		
