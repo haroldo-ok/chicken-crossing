@@ -124,36 +124,44 @@ void handle_player_input() {
 	// Player 1
 	if (joy & PORT_A_KEY_UP) {
 		if (player1->y > PLAYER_TOP) player1->y -= PLAYER_SPEED;
+		player1->facing_left = 0;
 		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_DOWN) {
 		if (player1->y < PLAYER_BOTTOM) player1->y += PLAYER_SPEED;
+		player1->facing_left = 1;
 		shuffle_random(2);
 	}
 	
 	// Player 2
 	if (joy & PORT_A_KEY_2) {
 		if (player2->y > PLAYER_TOP) player2->y -= PLAYER_SPEED;
+		player2->facing_left = 0;
 		shuffle_random(1);
 	} else if (joy & PORT_A_KEY_1) {
 		if (player2->y < PLAYER_BOTTOM) player2->y += PLAYER_SPEED;
+		player2->facing_left = 1;
 		shuffle_random(2);
 	}
 
 	// Player 3
 	if (joy & PORT_B_KEY_UP) {
 		if (player3->y > PLAYER_TOP) player3->y -= PLAYER_SPEED;
+		player3->facing_left = 0;
 		shuffle_random(1);
 	} else if (joy & PORT_B_KEY_DOWN) {
 		if (player3->y < PLAYER_BOTTOM) player3->y += PLAYER_SPEED;
+		player3->facing_left = 1;
 		shuffle_random(2);
 	}
 
 	// Player 4
 	if (joy & PORT_B_KEY_2) {
 		if (player4->y > PLAYER_TOP) player4->y -= PLAYER_SPEED;
+		player4->facing_left = 0;
 		shuffle_random(1);
 	} else if (joy & PORT_B_KEY_1) {
 		if (player4->y < PLAYER_BOTTOM) player4->y += PLAYER_SPEED;
+		player4->facing_left = 1;
 		shuffle_random(2);
 	}
 }
