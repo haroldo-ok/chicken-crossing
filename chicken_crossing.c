@@ -96,9 +96,8 @@ void interrupt_handler() {
 }
 
 void load_standard_palettes() {
-	SMS_loadBGPalette(sprites_palette_bin);
+	SMS_loadBGPalette(background_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
-	SMS_setBGPaletteColor(0, 0x2A);
 	SMS_setSpritePaletteColor(0, 0);
 }
 
@@ -218,10 +217,9 @@ void handle_spawners() {
 	for (i = 0, y = PLAYER_TOP + 10; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
 		act2 = act + 1;
 		if (!act->active && !act2->active) {
-			if (rand() & 3 > 1) {
-				// Always spawn from the left
-				facing_left = 0;
-				thing_to_spawn = (rand() >> 4) & 1;
+			if (!(rand() & 0x1F)) {
+				facing_left = (rand() >> 4) & 1;
+				thing_to_spawn = (rand() >> 4) % 4;
 				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
 				switch (thing_to_spawn) {
@@ -242,6 +240,20 @@ void handle_spawners() {
 					act2->spd_x = act->spd_x;
 					act2->group = act->group;
 					break;
+
+				case 2:
+					// Spawn a sports car
+					init_actor(act, 0, y, 3, 1, 78, 1);
+					act->spd_x = level.submarine_speed + boost;
+					act->group = GROUP_RED_CAR;
+					break;
+
+				case 3:
+					// Spawn a pickup truck
+					init_actor(act, 0, y, 3, 1, 90, 1);
+					act->spd_x = level.submarine_speed + boost;
+					act->group = GROUP_RED_CAR;
+					break;
 				}
 				
 				adjust_facing(act, facing_left);
@@ -252,6 +264,16 @@ void handle_spawners() {
 }
 
 void draw_background() {
+	unsigned int *ch = background_tilemap_bin;
+	
+	SMS_setNextTileatXY(0, 0);
+	for (char y = 0; y != 24; y++) {
+		for (char x = 0; x != 32; x++) {
+			unsigned int tile_number = *ch + 256;
+			SMS_setTile(tile_number);
+			ch++;
+		}
+	}
 }
 
 char is_touching(actor *act1, actor *act2) {
@@ -392,7 +414,7 @@ void initialize_level() {
 	
 	clear_actors();
 		
-	level.fish_speed = 1 + level.number / 3;
+	level.fish_speed = 2 + level.number / 3;
 	level.submarine_speed = 1 + level.number / 5;
 	level.diver_speed = 1 + level.number / 6;
 	
@@ -403,7 +425,7 @@ void initialize_level() {
 	level.enemy_can_fire = 1;
 	level.show_diver_indicator = level.number < 2;
 	
-	level.boost_chance = 14 - level.number * 2 / 3;
+	level.boost_chance = 8 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
@@ -450,6 +472,7 @@ char gameplay_loop() {
 	SMS_disableLineInterrupt();
 
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 256);
 	
 	draw_background();
 
@@ -572,6 +595,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,1, 2021,12,8, "Haroldo-OK\\2021", "Chicken Crossing",
+SMS_EMBED_SDSC_HEADER(0,2, 2021,12,10, "Haroldo-OK\\2021", "Chicken Crossing",
   "Made for The Honest Jam III - https://itch.io/jam/honest-jam-3.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
