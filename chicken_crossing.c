@@ -218,8 +218,7 @@ void handle_spawners() {
 		act2 = act + 1;
 		if (!act->active && !act2->active) {
 			if (rand() & 3 > 1) {
-				// Always spawn from the left
-				facing_left = 0;
+				facing_left = (rand() >> 4) & 1;
 				thing_to_spawn = (rand() >> 4) & 1;
 				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
