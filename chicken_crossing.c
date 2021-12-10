@@ -217,7 +217,7 @@ void handle_spawners() {
 	for (i = 0, y = PLAYER_TOP + 10; i != MAX_SPAWNERS; i++, act += 2, y += 24) {
 		act2 = act + 1;
 		if (!act->active && !act2->active) {
-			if (rand() & 3 > 1) {
+			if (!(rand() & 0x1F)) {
 				facing_left = (rand() >> 4) & 1;
 				thing_to_spawn = (rand() >> 4) & 1;
 				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
@@ -400,7 +400,7 @@ void initialize_level() {
 	
 	clear_actors();
 		
-	level.fish_speed = 1 + level.number / 3;
+	level.fish_speed = 2 + level.number / 3;
 	level.submarine_speed = 1 + level.number / 5;
 	level.diver_speed = 1 + level.number / 6;
 	
@@ -411,7 +411,7 @@ void initialize_level() {
 	level.enemy_can_fire = 1;
 	level.show_diver_indicator = level.number < 2;
 	
-	level.boost_chance = 14 - level.number * 2 / 3;
+	level.boost_chance = 8 - level.number * 2 / 3;
 	if (level.boost_chance < 2) level.boost_chance = 2;
 }
 
