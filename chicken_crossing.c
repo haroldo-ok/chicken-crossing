@@ -219,7 +219,7 @@ void handle_spawners() {
 		if (!act->active && !act2->active) {
 			if (!(rand() & 0x1F)) {
 				facing_left = (rand() >> 4) & 1;
-				thing_to_spawn = (rand() >> 4) % 3;
+				thing_to_spawn = (rand() >> 4) % 4;
 				boost = (rand() >> 4) % level.boost_chance ? 0 : 1;
 				
 				switch (thing_to_spawn) {
@@ -244,6 +244,13 @@ void handle_spawners() {
 				case 2:
 					// Spawn a sports car
 					init_actor(act, 0, y, 3, 1, 78, 1);
+					act->spd_x = level.submarine_speed + boost;
+					act->group = GROUP_RED_CAR;
+					break;
+
+				case 3:
+					// Spawn a pickup truck
+					init_actor(act, 0, y, 3, 1, 90, 1);
 					act->spd_x = level.submarine_speed + boost;
 					act->group = GROUP_RED_CAR;
 					break;
