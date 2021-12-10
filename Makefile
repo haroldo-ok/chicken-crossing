@@ -3,11 +3,14 @@ OBJS := data.rel actor.rel chicken_crossing.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/sprites_tiles.psgcompr
+data.c: data/* data/sprites_tiles.psgcompr data/background_tiles.psgcompr
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
 	BMP2Tile.exe data/img/sprites.png -noremovedupes -8x16 -palsms -fullpalette -savetiles data/sprites_tiles.psgcompr -savepalette data/sprites_palette.bin
+
+data/background_tiles.psgcompr: data/img/background.png
+	BMP2Tile.exe data/img/background.png -palsms -fullpalette -savetiles data/background_tiles.psgcompr -savetilemap data/background_tilemap.bin -savepalette data/background_palette.bin
 
 data/%.path: data/path/%.spline.json
 	node tool/convert_splines.js $< $@

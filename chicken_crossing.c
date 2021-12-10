@@ -96,9 +96,8 @@ void interrupt_handler() {
 }
 
 void load_standard_palettes() {
-	SMS_loadBGPalette(sprites_palette_bin);
+	SMS_loadBGPalette(background_palette_bin);
 	SMS_loadSpritePalette(sprites_palette_bin);
-	SMS_setBGPaletteColor(0, 0x2A);
 	SMS_setSpritePaletteColor(0, 0);
 }
 
@@ -252,6 +251,16 @@ void handle_spawners() {
 }
 
 void draw_background() {
+	unsigned int *ch = background_tilemap_bin;
+	
+	SMS_setNextTileatXY(0, 0);
+	for (char y = 0; y != 24; y++) {
+		for (char x = 0; x != 32; x++) {
+			unsigned int tile_number = *ch + 256;
+			SMS_setTile(tile_number);
+			ch++;
+		}
+	}
 }
 
 char is_touching(actor *act1, actor *act2) {
@@ -450,6 +459,7 @@ char gameplay_loop() {
 	SMS_disableLineInterrupt();
 
 	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	SMS_loadPSGaidencompressedTiles(background_tiles_psgcompr, 256);
 	
 	draw_background();
 
