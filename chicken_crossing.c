@@ -178,7 +178,7 @@ void handle_player_input() {
 		}
 	}
 	player_knockback(player3);
-	check_player_reached_top(player3, score3, player_1_score_psg);
+	check_player_reached_top(player3, score3, player_3_score_psg);
 
 	// Player 4
 	if (!player4->state) {
@@ -193,7 +193,7 @@ void handle_player_input() {
 		}
 	}
 	player_knockback(player4);
-	check_player_reached_top(player4, score4, player_2_score_psg);
+	check_player_reached_top(player4, score4, player_4_score_psg);
 }
 
 void adjust_facing(actor *act, char facing_left) {

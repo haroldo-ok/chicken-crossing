@@ -4,7 +4,7 @@ OBJS := data.rel actor.rel chicken_crossing.rel
 all: $(PRJNAME).sms
 
 data.c: data/* data/sprites_tiles.psgcompr data/background_tiles.psgcompr \
-	data/player_1_score.psg data/player_2_score.psg
+	data/player_1_score.psg data/player_2_score.psg data/player_3_score.psg data/player_4_score.psg
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
