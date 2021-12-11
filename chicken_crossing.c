@@ -497,8 +497,6 @@ char gameplay_loop() {
 			level.starting = 1;
 		}
 	
-		PSGPlayNoRepeat(player_shot_psg);
-
 		handle_player_input();
 		
 		handle_spawners();
