@@ -129,7 +129,7 @@ void check_player_reached_top(actor *ply, score_data *score) {
 	
 	ply->y = PLAYER_BOTTOM;
 	add_score(score, 1);
-	PSGPlayNoRepeat(player_shot_psg);
+	PSGSFXPlay(rescue_diver_psg, SFX_CHANNELS2AND3);
 }
 
 void handle_player_input() {
