@@ -13,11 +13,8 @@ data/sprites_tiles.psgcompr: data/img/sprites.png
 data/background_tiles.psgcompr: data/img/background.png
 	BMP2Tile.exe data/img/background.png -palsms -fullpalette -savetiles data/background_tiles.psgcompr -savetilemap data/background_tilemap.bin -savepalette data/background_palette.bin
 
-data/player_shot.psg: data/deflemask/player_shot.vgm
-	vgm2psg data/deflemask/player_shot.vgm data/player_shot.psg 23
-
-data/rescue_diver.psg: data/deflemask/rescue_diver.vgm
-	vgm2psg data/deflemask/rescue_diver.vgm data/rescue_diver.psg 23
+data/%.psg: data/deflemask/%.vgm
+	vgm2psg $< $@ 23
 
 data/%.path: data/path/%.spline.json
 	node tool/convert_splines.js $< $@
