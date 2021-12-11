@@ -129,6 +129,7 @@ void check_player_reached_top(actor *ply, score_data *score) {
 	
 	ply->y = PLAYER_BOTTOM;
 	add_score(score, 1);
+	PSGPlayNoRepeat(player_shot_psg);
 }
 
 void handle_player_input() {
@@ -496,6 +497,8 @@ char gameplay_loop() {
 			level.starting = 1;
 		}
 	
+		PSGPlayNoRepeat(player_shot_psg);
+
 		handle_player_input();
 		
 		handle_spawners();
