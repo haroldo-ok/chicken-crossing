@@ -124,11 +124,12 @@ void player_knockback(actor *ply) {
 	ply->state_timer--;
 }
 
-void check_player_reached_top(actor *ply, score_data *score) {
+void check_player_reached_top(actor *ply, score_data *score, void *sfx) {
 	if (ply->y > PLAYER_TOP + PLAYER_SPEED) return;
 	
 	ply->y = PLAYER_BOTTOM;
 	add_score(score, 1);
+	PSGSFXPlay(sfx, SFX_CHANNELS2AND3);
 }
 
 void handle_player_input() {
@@ -147,7 +148,7 @@ void handle_player_input() {
 		}		
 	}
 	player_knockback(player1);
-	check_player_reached_top(player1, score1);
+	check_player_reached_top(player1, score1, player_1_score_psg);
 	
 	// Player 2
 	if (!player2->state) {
@@ -162,7 +163,7 @@ void handle_player_input() {
 		}
 	}
 	player_knockback(player2);
-	check_player_reached_top(player2, score2);
+	check_player_reached_top(player2, score2, player_2_score_psg);
 
 	// Player 3
 	if (!player3->state) {
@@ -177,7 +178,7 @@ void handle_player_input() {
 		}
 	}
 	player_knockback(player3);
-	check_player_reached_top(player3, score3);
+	check_player_reached_top(player3, score3, player_3_score_psg);
 
 	// Player 4
 	if (!player4->state) {
@@ -192,7 +193,7 @@ void handle_player_input() {
 		}
 	}
 	player_knockback(player4);
-	check_player_reached_top(player4, score4);
+	check_player_reached_top(player4, score4, player_4_score_psg);
 }
 
 void adjust_facing(actor *act, char facing_left) {
@@ -496,6 +497,8 @@ char gameplay_loop() {
 			level.starting = 1;
 		}
 	
+		PSGPlayNoRepeat(player_shot_psg);
+
 		handle_player_input();
 		
 		handle_spawners();
@@ -595,6 +598,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,2, 2021,12,10, "Haroldo-OK\\2021", "Chicken Crossing",
+SMS_EMBED_SDSC_HEADER(0,3, 2021,12,11, "Haroldo-OK\\2021", "Chicken Crossing",
   "Made for The Honest Jam III - https://itch.io/jam/honest-jam-3.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");

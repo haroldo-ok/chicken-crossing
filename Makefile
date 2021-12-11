@@ -3,7 +3,8 @@ OBJS := data.rel actor.rel chicken_crossing.rel
 
 all: $(PRJNAME).sms
 
-data.c: data/* data/sprites_tiles.psgcompr data/background_tiles.psgcompr
+data.c: data/* data/sprites_tiles.psgcompr data/background_tiles.psgcompr \
+	data/player_1_score.psg data/player_2_score.psg data/player_3_score.psg data/player_4_score.psg
 	folder2c data data
 	
 data/sprites_tiles.psgcompr: data/img/sprites.png
@@ -11,6 +12,9 @@ data/sprites_tiles.psgcompr: data/img/sprites.png
 
 data/background_tiles.psgcompr: data/img/background.png
 	BMP2Tile.exe data/img/background.png -palsms -fullpalette -savetiles data/background_tiles.psgcompr -savetilemap data/background_tilemap.bin -savepalette data/background_palette.bin
+
+data/%.psg: data/deflemask/%.vgm
+	vgm2psg $< $@ 23
 
 data/%.path: data/path/%.spline.json
 	node tool/convert_splines.js $< $@
