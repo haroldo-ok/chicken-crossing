@@ -570,6 +570,7 @@ char handle_gameover() {
 }
 
 char handle_title() {
+	unsigned int joy = SMS_getKeysStatus();
 
 	SMS_waitForVBlank();
 	SMS_displayOff();
@@ -584,7 +585,19 @@ char handle_title() {
 		
 	SMS_displayOn();
 
-	wait_frames(180);
+	wait_frames(30);
+	
+	// Wait button press
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	} while (!(joy & (PORT_A_KEY_1 | PORT_A_KEY_2 | PORT_B_KEY_1 | PORT_B_KEY_2)));
+
+	// Wait button release
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	} while ((joy & (PORT_A_KEY_1 | PORT_A_KEY_2 | PORT_B_KEY_1 | PORT_B_KEY_2)));
 
 	return STATE_GAMEPLAY;
 }
