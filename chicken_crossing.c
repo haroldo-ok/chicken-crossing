@@ -264,8 +264,8 @@ void handle_spawners() {
 	}
 }
 
-void draw_background() {
-	unsigned int *ch = background_tilemap_bin;
+void draw_background_map(void *map) {
+	unsigned int *ch = map;
 	
 	SMS_setNextTileatXY(0, 0);
 	for (char y = 0; y != 24; y++) {
@@ -275,6 +275,10 @@ void draw_background() {
 			ch++;
 		}
 	}
+}
+
+void draw_background() {
+	draw_background_map(background_tilemap_bin);
 }
 
 char is_touching(actor *act1, actor *act2) {
@@ -566,6 +570,26 @@ char handle_gameover() {
 }
 
 char handle_title() {
+
+	SMS_waitForVBlank();
+	SMS_displayOff();
+	SMS_disableLineInterrupt();
+
+	reset_actors_and_player();
+	clear_sprites();
+
+	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
+	SMS_loadPSGaidencompressedTiles(title_tiles_psgcompr, 256);
+	
+	load_standard_palettes();
+	
+	SMS_loadBGPalette(title_palette_bin);
+	draw_background_map(title_tilemap_bin);
+		
+	SMS_displayOn();
+
+	wait_frames(180);
+
 	return STATE_GAMEPLAY;
 }
 
