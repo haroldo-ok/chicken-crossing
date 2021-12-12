@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "lib/SMSlib.h"
 #include "lib/PSGlib.h"
@@ -264,8 +266,8 @@ void handle_spawners() {
 	}
 }
 
-void draw_background() {
-	unsigned int *ch = background_tilemap_bin;
+void draw_background_map(void *map) {
+	unsigned int *ch = map;
 	
 	SMS_setNextTileatXY(0, 0);
 	for (char y = 0; y != 24; y++) {
@@ -275,6 +277,10 @@ void draw_background() {
 			ch++;
 		}
 	}
+}
+
+void draw_background() {
+	draw_background_map(background_tilemap_bin);
 }
 
 char is_touching(actor *act1, actor *act2) {
@@ -438,6 +444,13 @@ void perform_level_end_sequence() {
 	level.ending = 0;
 }
 
+void clear_scores() {
+	set_score(score1, 0);
+	set_score(score2, 0);
+	set_score(score3, 0);
+	set_score(score4, 0);
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -445,11 +458,8 @@ char gameplay_loop() {
 	int timer_delay = 30;
 	
 	animation_delay = 0;
-	
-	set_score(score1, 0);
-	set_score(score2, 0);
-	set_score(score3, 0);
-	set_score(score4, 0);
+
+	clear_scores();
 	score1->x = 7;
 	score1->y = 1;
 	score2->x = 12;
@@ -566,6 +576,46 @@ char handle_gameover() {
 }
 
 char handle_title() {
+	unsigned int joy = SMS_getKeysStatus();
+
+	SMS_waitForVBlank();
+	SMS_displayOff();
+	SMS_disableLineInterrupt();
+
+	reset_actors_and_player();
+	clear_sprites();
+
+	SMS_loadPSGaidencompressedTiles(title_tiles_psgcompr, 0);	
+	SMS_loadBGPalette(title_palette_bin);
+	SMS_loadTileMap(0, 0, title_tilemap_bin, title_tilemap_bin_size);
+		
+	SMS_load1bppTiles(font_1bpp, 352, font_1bpp_size, 0, 12);
+	SMS_configureTextRenderer(352 - 32);
+	
+	SMS_setNextTileatXY(3, 16);
+	puts("Press any button to start");
+
+	SMS_setNextTileatXY(3, 18);
+	puts("Last score:");
+	SMS_setNextTileatXY(3, 19);
+	printf("Player 1: %d Player 2: %d", score1->value, score2->value);
+	SMS_setNextTileatXY(3, 20);
+	printf("Player 3: %d Player 4: %d", score3->value, score4->value);
+	
+	SMS_displayOn();
+	
+	// Wait button press
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	} while (!(joy & (PORT_A_KEY_1 | PORT_A_KEY_2 | PORT_B_KEY_1 | PORT_B_KEY_2)));
+
+	// Wait button release
+	do {
+		SMS_waitForVBlank();
+		joy = SMS_getKeysStatus();
+	} while ((joy & (PORT_A_KEY_1 | PORT_A_KEY_2 | PORT_B_KEY_1 | PORT_B_KEY_2)));
+
 	return STATE_GAMEPLAY;
 }
 
@@ -576,6 +626,8 @@ void main() {
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 	SMS_VDPturnOnFeature(VDPFEATURE_LOCKHSCROLL);
+	
+	clear_scores();
 	
 	while (1) {
 		switch (state) {
@@ -596,6 +648,6 @@ void main() {
 }
 
 SMS_EMBED_SEGA_ROM_HEADER(9999,0); // code 9999 hopefully free, here this means 'homebrew'
-SMS_EMBED_SDSC_HEADER(0,3, 2021,12,11, "Haroldo-OK\\2021", "Chicken Crossing",
+SMS_EMBED_SDSC_HEADER(0,4, 2021,12,12, "Haroldo-OK\\2021", "Chicken Crossing",
   "Made for The Honest Jam III - https://itch.io/jam/honest-jam-3.\n"
   "Built using devkitSMS & SMSlib - https://github.com/sverx/devkitSMS");
