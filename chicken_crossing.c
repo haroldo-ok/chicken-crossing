@@ -578,13 +578,9 @@ char handle_title() {
 	reset_actors_and_player();
 	clear_sprites();
 
-	SMS_loadPSGaidencompressedTiles(sprites_tiles_psgcompr, 0);
-	SMS_loadPSGaidencompressedTiles(title_tiles_psgcompr, 256);
-	
-	load_standard_palettes();
-	
+	SMS_loadPSGaidencompressedTiles(title_tiles_psgcompr, 0);	
 	SMS_loadBGPalette(title_palette_bin);
-	draw_background_map(title_tilemap_bin);
+	SMS_loadTileMap(0, 0, title_tilemap_bin, title_tilemap_bin_size);
 		
 	SMS_displayOn();
 
