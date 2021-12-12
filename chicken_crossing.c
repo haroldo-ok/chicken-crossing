@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "lib/SMSlib.h"
 #include "lib/PSGlib.h"
@@ -442,6 +444,13 @@ void perform_level_end_sequence() {
 	level.ending = 0;
 }
 
+void clear_scores() {
+	set_score(score1, 0);
+	set_score(score2, 0);
+	set_score(score3, 0);
+	set_score(score4, 0);
+}
+
 char gameplay_loop() {
 	int frame = 0;
 	int fish_frame = 0;
@@ -449,11 +458,8 @@ char gameplay_loop() {
 	int timer_delay = 30;
 	
 	animation_delay = 0;
-	
-	set_score(score1, 0);
-	set_score(score2, 0);
-	set_score(score3, 0);
-	set_score(score4, 0);
+
+	clear_scores();
 	score1->x = 7;
 	score1->y = 1;
 	score2->x = 12;
@@ -583,9 +589,20 @@ char handle_title() {
 	SMS_loadBGPalette(title_palette_bin);
 	SMS_loadTileMap(0, 0, title_tilemap_bin, title_tilemap_bin_size);
 		
-	SMS_displayOn();
+	SMS_load1bppTiles(font_1bpp, 352, font_1bpp_size, 0, 12);
+	SMS_configureTextRenderer(352 - 32);
+	
+	SMS_setNextTileatXY(3, 16);
+	puts("Press any button to start");
 
-	wait_frames(30);
+	SMS_setNextTileatXY(3, 18);
+	puts("Last score:");
+	SMS_setNextTileatXY(3, 19);
+	printf("Player 1: %d Player 2: %d", score1->value, score2->value);
+	SMS_setNextTileatXY(3, 20);
+	printf("Player 3: %d Player 4: %d", score3->value, score4->value);
+	
+	SMS_displayOn();
 	
 	// Wait button press
 	do {
@@ -609,6 +626,8 @@ void main() {
 	SMS_setSpriteMode(SPRITEMODE_TALL);
 	SMS_VDPturnOnFeature(VDPFEATURE_HIDEFIRSTCOL);
 	SMS_VDPturnOnFeature(VDPFEATURE_LOCKHSCROLL);
+	
+	clear_scores();
 	
 	while (1) {
 		switch (state) {
